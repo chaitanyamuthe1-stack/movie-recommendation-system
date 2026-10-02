@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-09-21T20:53:26.799916",
+  "status": "PASS",
+  "summary": {
+    "movies_count": 4804,
+    "ratings_count": 70194,
+    "users_count": 610,
+    "matrix_sparsity": "97.60%",
+    "passed_validation": true
+  },
+  "movies_audit": {
+    "total_movies": 4804,
+    "null_movie_ids": 0,
+    "null_titles": 0,
+    "duplicate_movie_ids": 0,
+    "empty_tags_count": 0,
+    "columns": [
+      "movieId",
+      "tmdbId",
+      "title",
+      "overview",
+      "tagline",
+      "release_date",
+      "release_year",
+      "vote_average",
+      "vote_count",
+      "popularity",
+      "genres_list",
+      "keywords_list",
+      "cast_list",
+      "director",
+      "tags"
+    ]
+  },
+  "ratings_audit": {
+    "total_ratings": 70194,
+    "unique_users": 610,
+    "unique_rated_movies": 3536,
+    "null_user_ids": 0,
+    "null_movie_ids": 0,
+    "duplicate_ratings": 0,
+    "invalid_rating_values": 0,
+    "orphan_ratings_count": 0,
+    "rating_scale": {
+      "min": 0.5,
+      "max": 5.0,
+      "mean": 3.54,
+      "median": 3.5
+    },
+    "rating_distribution": {
+      "0.5": 971,
+      "1.0": 1763,
+      "1.5": 1190,
+      "2.0": 4859,
+      "2.5": 3973,
+      "3.0": 13233,
+      "3.5": 9514,
+      "4.0": 18766,
+      "4.5": 6339,
+      "5.0": 9586
+    }
+  },
+  "sparsity_audit": {
+    "possible_interactions": 2930440,
+    "actual_interactions": 70194,
+    "matrix_sparsity_percentage": 97.6047,
+    "user_activity_mean": 115.07,
+    "ratings_per_movie_mean": 19.85
+  },
+  "issues_detected": []
+}

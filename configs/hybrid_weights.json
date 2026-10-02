@@ -1,0 +1,31 @@
+{
+  "cold_start_threshold": 5,
+  "warm_user_threshold": 20,
+  "cold_user_weights": {
+    "collaborative": 0.05,
+    "svd": 0.05,
+    "neural_cf": 0.00,
+    "content": 0.45,
+    "genre_preference": 0.30,
+    "popularity": 0.15,
+    "recency": 0.00
+  },
+  "moderate_user_weights": {
+    "collaborative": 0.20,
+    "svd": 0.30,
+    "neural_cf": 0.10,
+    "content": 0.25,
+    "genre_preference": 0.10,
+    "popularity": 0.03,
+    "recency": 0.02
+  },
+  "warm_user_weights": {
+    "collaborative": 0.25,
+    "svd": 0.35,
+    "neural_cf": 0.15,
+    "content": 0.15,
+    "genre_preference": 0.05,
+    "popularity": 0.02,
+    "recency": 0.03
+  }
+}

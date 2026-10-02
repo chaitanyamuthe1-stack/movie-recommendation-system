@@ -1,0 +1,16 @@
+{
+  "num_users": 610,
+  "num_movies": 4804,
+  "latent_dim_gmf": 32,
+  "latent_dim_mlp": 32,
+  "hidden_layers": [
+    64,
+    32,
+    16
+  ],
+  "dropout": 0.2,
+  "rmse": 0.8399,
+  "mae": 0.6455,
+  "epochs": 6,
+  "batch_size": 256
+}

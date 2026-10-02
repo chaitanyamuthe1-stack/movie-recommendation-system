@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-09-21T22:10:27.873013",
+  "k": 10,
+  "dataset_info": {
+    "total_users": 610,
+    "total_movies": 4804,
+    "total_ratings": 70194,
+    "train_ratings": 56155,
+    "test_ratings": 14039,
+    "sparsity_pct": 97.6
+  },
+  "models": {
+    "content_based": {
+      "precision@10": 0.055,
+      "recall@10": 0.0077,
+      "f1@10": 0.0129,
+      "catalog_coverage_pct": 1.6,
+      "avg_latency_ms": 1817.56,
+      "evaluated_users_count": 20,
+      "rmse": "N/A",
+      "mae": "N/A"
+    },
+    "collaborative": {
+      "precision@10": 0.405,
+      "recall@10": 0.0559,
+      "f1@10": 0.0949,
+      "catalog_coverage_pct": 2.94,
+      "avg_latency_ms": 9011.61,
+      "evaluated_users_count": 20,
+      "rmse": "N/A",
+      "mae": "N/A"
+    },
+    "svd": {
+      "precision@10": 0.0,
+      "recall@10": 0.0,
+      "f1@10": 0.0,
+      "catalog_coverage_pct": 0.46,
+      "avg_latency_ms": 1830.15,
+      "evaluated_users_count": 20,
+      "rmse": 0.8755,
+      "mae": 0.661
+    },
+    "neural_cf": {
+      "precision@10": 0.0,
+      "recall@10": 0.0,
+      "f1@10": 0.0,
+      "catalog_coverage_pct": 2.6,
+      "avg_latency_ms": 1945.3,
+      "evaluated_users_count": 20,
+      "rmse": 0.8422,
+      "mae": 0.6383
+    },
+    "hybrid": {
+      "precision@10": 0.415,
+      "recall@10": 0.0572,
+      "f1@10": 0.0973,
+      "catalog_coverage_pct": 2.27,
+      "avg_latency_ms": 9593.96,
+      "evaluated_users_count": 20,
+      "rmse": "N/A",
+      "mae": "N/A"
+    }
+  }
+}
