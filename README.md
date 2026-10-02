@@ -204,3 +204,5 @@ When a user with 0 ratings logs in, the platform triggers an interactive onboard
 - **Developed a Multi-Signal Hybrid Ensemble with Dynamic Weighting**, boosting recommendation **Precision@10 to 0.4150** and **F1-Score to 0.0973** across warm and cold-start user cohorts.
 - **Implemented Maximal Marginal Relevance (MMR) Ranking & Explainable AI (XAI)**, reducing genre redundancy and generating grounded feature attribution justifications for user trust.
 - **Designed a Catalog-Grounded NLP Conversational Agent** capable of zero-shot intent extraction, semantic search, and streaming recommendations with sub-15ms response latencies.
+#   m o v i e - r e c o m m e n d a t i o n - s y s t e m  
+ 
