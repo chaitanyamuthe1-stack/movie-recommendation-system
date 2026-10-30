@@ -83,6 +83,8 @@ export interface UserRating {
   rating: number;
   movie_title?: string;
   created_at: string;
+  poster_path?: string;
+  poster_url?: string;
 }
 
 export interface ModelMetrics {

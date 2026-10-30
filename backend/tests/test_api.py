@@ -94,3 +94,46 @@ def test_admin_weights():
     weights = res.json()
     assert "warm_user_weights" in weights
     assert "cold_user_weights" in weights
+
+def test_trending_movies():
+    response = client.get("/api/movies/trending?limit=10")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+@pytest.mark.parametrize("strat", ["hybrid", "svd", "neural_cf", "collaborative", "content_based", "cold_start", "item_cf", "content"])
+def test_all_recommendation_strategies(strat):
+    response = client.get(f"/api/recommendations/1?strategy={strat}&limit=5")
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert len(data["items"]) > 0
+
+def test_similar_movies_post():
+    payload = {"movie_id": 1, "top_n": 4}
+    response = client.post("/api/recommendations/movie", json=payload)
+    assert response.status_code == 200
+    items = response.json()
+    assert isinstance(items, list)
+    assert len(items) > 0
+
+def test_submit_rating_and_invalidation():
+    payload = {"user_id": 1, "movie_id": 1, "rating": 4.5}
+    response = client.post("/api/ratings", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["rating"] == 4.5
+    assert data["movie_id"] == 1
+
+def test_user_profile_and_ratings():
+    res_prof = client.get("/api/users/1/profile")
+    assert res_prof.status_code == 200
+    prof = res_prof.json()
+    assert "user" in prof
+    assert "rating_count" in prof
+
+    res_rat = client.get("/api/users/1/ratings")
+    assert res_rat.status_code == 200
+    ratings = res_rat.json()
+    assert isinstance(ratings, list)

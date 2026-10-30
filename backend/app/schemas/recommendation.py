@@ -20,6 +20,7 @@ class ExplanationResponse(BaseModel):
     confidence_score: float = 0.90
 
 class MovieRecommendationItem(BaseModel):
+    id: Optional[int] = None
     movie_id: int
     tmdb_id: Optional[int] = None
     imdb_id: Optional[str] = None

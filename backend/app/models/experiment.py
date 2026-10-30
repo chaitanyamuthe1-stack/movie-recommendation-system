@@ -27,3 +27,4 @@ class ExperimentLog(Base):
     parameters = Column(Text, default="{}")
     results = Column(Text, default="{}")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+

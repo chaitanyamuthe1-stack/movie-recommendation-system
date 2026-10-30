@@ -27,7 +27,7 @@ router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 @router.get("/{user_id}", response_model=RecommendationResponse)
 def get_user_recommendations(
     user_id: int,
-    strategy: str = Query("hybrid", regex="^(hybrid|svd|neural_cf|collaborative|content_based|cold_start)$"),
+    strategy: str = Query("hybrid", pattern="^(hybrid|svd|neural_cf|collaborative|item_cf|content_based|content|cold_start)$"),
     limit: int = Query(15, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
@@ -41,6 +41,13 @@ def get_user_recommendations(
         return cached_recs
 
     engine = RecommendationEngine.get_instance()
+
+    # Normalize strategy name
+    normalized_strat = strategy.lower().strip()
+    if normalized_strat == "item_cf":
+        normalized_strat = "collaborative"
+    elif normalized_strat == "content":
+        normalized_strat = "content_based"
 
     # Fetch user ratings from database
     user_ratings_db = db.query(Rating).filter(Rating.user_id == user_id).all()
@@ -60,7 +67,7 @@ def get_user_recommendations(
         user_id=user_id,
         user_ratings=user_ratings_list,
         top_n=limit,
-        strategy=strategy,
+        strategy=normalized_strat,
         preferred_genres=preferred_genres
     )
 
@@ -111,6 +118,7 @@ def get_user_recommendations(
         match_pct = r.get("match_percentage", int(min(99, max(65, (r.get("predicted_score", 4.0) / 5.0) * 100))))
 
         items.append(MovieRecommendationItem(
+            id=mid,
             movie_id=mid,
             tmdb_id=tmdb_id,
             imdb_id=imdb_id,
@@ -152,7 +160,7 @@ def get_similar_movies(
 ):
     """Retrieve top-N content-similar movies based on metadata affinities."""
     engine = RecommendationEngine.get_instance()
-    recs = engine.get_similar_movies(movie_id=movie_id, top_n=top_n)
+    recs = engine.recommend_similar_movies(movie_id=movie_id, top_n=top_n)
 
     movie_ids = [r["movie_id"] for r in recs]
     movies = db.query(Movie).filter(Movie.id.in_(movie_ids)).all()
@@ -198,6 +206,14 @@ def get_similar_movies(
         ))
 
     return items
+
+@router.post("/movie", response_model=List[MovieRecommendationItem])
+def get_similar_movies_post(
+    req: SimilarMovieRequest,
+    db: Session = Depends(get_db)
+):
+    """Retrieve top-N content-similar movies based on metadata affinities (POST method)."""
+    return get_similar_movies(movie_id=req.movie_id, top_n=req.top_n, db=db)
 
 @router.get("/explain/{movie_id}", response_model=ExplanationResponse)
 def explain_movie(

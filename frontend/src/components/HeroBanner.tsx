@@ -1,158 +1,145 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Info, Sparkles, Star } from 'lucide-react';
 import { Movie } from '../types';
 import { getMovieBackdrop, getMovieLogo } from '../utils/moviePosters';
 
 interface HeroBannerProps {
   movie?: Movie;
+  movies?: Movie[];
   onOpenDetails: (movie: Movie) => void;
   onOpenExplanation: (movie: Movie) => void;
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
   movie,
+  movies = [],
   onOpenDetails,
   onOpenExplanation
 }) => {
-  const [logoError, setLogoError] = React.useState<boolean>(false);
+  const [logoError, setLogoError] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Reset logo error state when movie changes
-  React.useEffect(() => {
+  const playlist = (movies && movies.length > 0)
+    ? movies.slice(0, 5)
+    : (movie ? [movie] : []);
+
+  const activeMovie = playlist[currentIndex] || playlist[0] || movie;
+
+  // Reset index if playlist changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [playlist.length > 0 ? playlist[0]?.id : null]);
+
+  // Auto-rotate every 9 seconds, paused on hover
+  useEffect(() => {
+    if (playlist.length <= 1 || isHovered) return;
+
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % playlist.length);
+    }, 9000);
+
+    return () => clearInterval(timer);
+  }, [playlist.length, isHovered]);
+
+  useEffect(() => {
     setLogoError(false);
-  }, [movie?.id, movie?.title]);
+  }, [activeMovie?.id, activeMovie?.title]);
 
-  if (!movie) {
-    return (
-      <div style={{ height: '480px', width: '100%', marginBottom: '30px' }} className="skeleton" />
-    );
+  if (!activeMovie) {
+    return <div className="hero skeleton" style={{ minHeight: 580 }} />;
   }
 
-  const backdropUrl = getMovieBackdrop(movie);
-  const logoUrl = getMovieLogo(movie);
+  const logoUrl = getMovieLogo(activeMovie);
+  const backdropUrl = getMovieBackdrop(activeMovie);
 
   return (
-    <div style={{
-      position: 'relative',
-      height: '520px',
-      width: '100%',
-      marginBottom: '40px',
-      borderRadius: '24px',
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'flex-end',
-      boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8)'
-    }}>
-      {/* Background Graphic & Dark Overlay */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: `linear-gradient(to top, #07090e 10%, rgba(7, 9, 14, 0.7) 50%, rgba(7, 9, 14, 0.3) 100%), url(${backdropUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        filter: 'brightness(0.9)'
-      }} />
+    <section
+      className="hero"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      aria-label="Featured recommendation"
+    >
+      <div className="hero-bg" style={{ backgroundImage: `url(${backdropUrl})` }} />
+      <div className="hero-perf" aria-hidden="true">
+        {Array.from({ length: 10 }).map((_, i) => <i key={i} />)}
+      </div>
 
-      {/* Hero Content */}
-      <div style={{
-        position: 'relative',
-        zIndex: 2,
-        padding: '40px 48px',
-        maxWidth: '850px'
-      }}>
-        {/* Match Percentage & Model Signal */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <span className="badge-match" style={{ fontSize: '0.85rem', padding: '4px 12px' }}>
-            {movie.match_percentage || 94}% Match
+      <div className="hero-content" key={activeMovie.id}>
+        <div className="hero-eyebrow">
+          <span className="badge-match">{activeMovie.match_percentage || 94}% match for you</span>
+          <span className="badge-model">{activeMovie.model || 'HYBRID ENSEMBLE'}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--gold)', fontWeight: 800, fontSize: '.9rem' }}>
+            <Star size={15} fill="currentColor" /> {activeMovie.vote_average.toFixed(1)}
           </span>
-          <span className="badge-model">
-            {movie.model || 'Hybrid Model'}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontSize: '0.9rem', fontWeight: 700 }}>
-            <Star size={16} fill="#f59e0b" color="#f59e0b" />
-            {movie.vote_average.toFixed(1)} / 10
-          </div>
-          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-            ({movie.release_year})
-          </span>
+          <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>{activeMovie.release_year}</span>
         </div>
 
-        {/* Movie Title or Official Logo */}
         {logoUrl && !logoError ? (
-          <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'center' }}>
-            <img
-              src={logoUrl}
-              alt={movie.title}
-              onError={() => setLogoError(true)}
-              style={{
-                maxHeight: '110px',
-                maxWidth: '460px',
-                width: 'auto',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.95)) drop-shadow(0 0 25px rgba(0,0,0,0.8))'
-              }}
-            />
-          </div>
+          <img
+            src={logoUrl}
+            alt={activeMovie.title}
+            onError={() => setLogoError(true)}
+            style={{
+              maxHeight: 120,
+              maxWidth: 480,
+              objectFit: 'contain',
+              marginBottom: 14,
+              filter: 'drop-shadow(0 6px 24px rgba(0,0,0,.95))'
+            }}
+          />
         ) : (
-          <h1 style={{
-            fontSize: '3.2rem',
-            fontWeight: 800,
-            lineHeight: 1.1,
-            marginBottom: '14px',
-            textShadow: '0 4px 20px rgba(0,0,0,0.8)'
-          }}>
-            {movie.title}
-          </h1>
+          <h1 className="hero-title">{activeMovie.title}</h1>
         )}
 
-        {/* Genres */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-          {movie.genres.map(g => (
-            <span key={g} className="badge-genre" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
-              {g}
-            </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {(activeMovie.genres || []).map((g) => (
+            <span key={g} className="badge-genre">{g}</span>
           ))}
         </div>
 
-        {/* Overview Synopsis */}
-        <p style={{
-          fontSize: '1rem',
-          color: '#cbd5e1',
-          lineHeight: 1.6,
-          marginBottom: '26px',
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          textShadow: '0 2px 10px rgba(0,0,0,0.7)'
-        }}>
-          {movie.overview || "An exceptional cinema experience curated specifically based on your collaborative taste profile."}
+        <p className="hero-overview">
+          {activeMovie.overview || 'Hand-picked for your taste profile by our hybrid recommendation engine.'}
         </p>
 
-        {/* Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <button
-            onClick={() => onOpenDetails(movie)}
-            className="btn-primary"
-            style={{ padding: '12px 28px', fontSize: '0.95rem' }}
-          >
-            <Info size={19} /> Movie Details
+        <div className="hero-actions">
+          <button className="btn-primary" onClick={() => onOpenDetails(activeMovie)}>
+            <Info size={18} /> Details
           </button>
-
-          {movie.explanation && (
-            <button
-              onClick={() => onOpenExplanation(movie)}
-              className="btn-secondary"
-              style={{
-                background: 'rgba(99, 102, 241, 0.2)',
-                borderColor: 'rgba(99, 102, 241, 0.4)',
-                color: '#c7d2fe'
-              }}
-            >
-              <Sparkles size={17} color="#a5b4fc" /> Why Recommended?
-            </button>
-          )}
+          <button
+            className="btn-secondary"
+            onClick={() => onOpenExplanation(activeMovie)}
+            style={{ borderColor: 'rgba(155,140,255,.5)', color: '#d9d3ff' }}
+          >
+            <Sparkles size={16} /> Why this pick?
+          </button>
         </div>
+
+        {playlist.length > 1 && (
+          <div className="hero-dots" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '22px' }}>
+            {playlist.map((m, idx) => (
+              <button
+                key={m.id || idx}
+                onClick={() => setCurrentIndex(idx)}
+                aria-label={`Jump to movie ${idx + 1}: ${m.title}`}
+                style={{
+                  width: idx === currentIndex ? '32px' : '10px',
+                  height: '8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: idx === currentIndex ? 'var(--gold)' : 'rgba(255, 240, 220, 0.25)',
+                  boxShadow: idx === currentIndex ? '0 0 10px rgba(255, 178, 64, 0.7)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+              />
+            ))}
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--subtle)', marginLeft: '8px' }}>
+              {currentIndex + 1} / {playlist.length} {isHovered ? '(paused)' : ''}
+            </span>
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 };

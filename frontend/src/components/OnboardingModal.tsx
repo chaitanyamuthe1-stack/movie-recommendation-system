@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Sparkles, Check, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Check, ArrowRight, ArrowLeft, X, Film, CheckCircle2, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
-import { getMoviePoster } from '../utils/moviePosters';
+import { getMoviePoster, generateMoviePoster } from '../utils/moviePosters';
+import { useToast } from '../context/ToastContext';
 
 interface OnboardingModalProps {
   userId: number;
@@ -37,12 +38,23 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onClose,
   onCompleted
 }) => {
-  if (!isOpen) return null;
-
-  const [step, setStep] = useState<1 | 2>(1);
+  const { showToast } = useToast();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedMovies, setSelectedMovies] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Keyboard navigation & escape listener
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres(prev =>
@@ -60,63 +72,104 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     setIsSubmitting(true);
     try {
       await api.submitOnboarding(userId, selectedGenres, selectedMovies);
+      showToast("Taste profile calibrated! Cold-start recommendations generated.", "success");
       onCompleted();
       onClose();
-    } catch (e) {
+    } catch (e: any) {
       console.error("Onboarding failed:", e);
+      showToast(e?.message || "Failed to submit taste profile.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (!isOpen) return null;
+
+  const progressPct = step === 1 ? 33 : step === 2 ? 66 : 100;
+
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
       <div
         className="glass-panel"
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
-          maxWidth: '720px',
-          background: '#0d111a',
-          borderRadius: '24px',
+          maxWidth: '780px',
+          background: 'var(--ink-2)',
+          borderRadius: 'var(--r-lg)',
           padding: '36px 40px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 40px rgba(229, 9, 20, 0.2)',
-          border: '1px solid rgba(229, 9, 20, 0.3)'
+          boxShadow: '0 30px 70px rgba(0, 0, 0, 0.95), var(--glow)',
+          border: '1px solid var(--line)',
+          position: 'relative'
         }}
       >
-        {/* Step Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--muted)',
+            cursor: 'pointer',
+            padding: '4px',
+            borderRadius: '50%'
+          }}
+          aria-label="Close onboarding"
+        >
+          <X size={20} />
+        </button>
+
+        {/* Header & Step Indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
-              background: 'linear-gradient(135deg, #e50914, #ff3342)',
-              borderRadius: '8px',
+              background: 'linear-gradient(135deg, var(--gold), var(--ember))',
+              borderRadius: 'var(--r-sm)',
               padding: '6px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              color: '#1a0e04'
             }}>
-              <Sparkles size={16} color="#ffffff" />
+              <Sparkles size={16} />
             </div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Cold-Start Onboarding Wizard
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--gold-soft)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'var(--font-mono)' }}>
+              Taste Calibration Wizard
             </span>
           </div>
 
-          <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-            Step {step} of 2
+          <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontFamily: 'var(--font-mono)', paddingRight: '28px' }}>
+            Step {step} of 3
           </span>
         </div>
 
-        {step === 1 ? (
+        {/* Progress Bar */}
+        <div style={{ width: '100%', height: '6px', background: 'rgba(255, 240, 220, 0.08)', borderRadius: '3px', overflow: 'hidden', marginBottom: '28px' }}>
+          <div
+            style={{
+              width: `${progressPct}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, var(--gold), var(--ember))',
+              borderRadius: '3px',
+              transition: 'width 0.4s ease'
+            }}
+          />
+        </div>
+
+        {/* STEP 1: Select Genres */}
+        {step === 1 && (
           <div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '6px' }}>
+            <h2 id="onboarding-title" style={{ fontSize: '1.9rem', fontWeight: 900, marginBottom: '6px', fontFamily: 'var(--font-display)', color: 'var(--text)' }}>
               What genres do you love?
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.95rem', marginBottom: '24px' }}>
-              Select at least 2 genres to help our hybrid recommender bootstrap your initial preference vector.
+            <p style={{ color: 'var(--muted)', fontSize: '0.94rem', marginBottom: '26px' }}>
+              Select at least 2 favorite genres to bootstrap your preference vector across our latent space.
             </p>
 
-            {/* Genre Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px', marginBottom: '32px' }}>
               {AVAILABLE_GENRES.map(genre => {
                 const isSelected = selectedGenres.includes(genre);
                 return (
@@ -124,21 +177,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     key={genre}
                     onClick={() => toggleGenre(genre)}
                     style={{
-                      background: isSelected ? 'rgba(229, 9, 20, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                      border: `1px solid ${isSelected ? '#e50914' : 'rgba(255, 255, 255, 0.08)'}`,
-                      color: isSelected ? '#ffffff' : '#cbd5e1',
-                      borderRadius: '12px',
-                      padding: '14px 16px',
+                      background: isSelected ? 'rgba(255, 178, 64, 0.16)' : 'var(--panel)',
+                      border: `1px solid ${isSelected ? 'var(--gold)' : 'var(--line)'}`,
+                      color: isSelected ? 'var(--gold-soft)' : 'var(--text)',
+                      borderRadius: 'var(--r-md)',
+                      padding: '14px 18px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       cursor: 'pointer',
                       fontWeight: isSelected ? 700 : 500,
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s',
+                      boxShadow: isSelected ? '0 0 20px rgba(255,178,64,0.2)' : 'none'
                     }}
                   >
                     <span>{genre}</span>
-                    {isSelected && <Check size={16} color="#e50914" />}
+                    {isSelected && <Check size={16} color="var(--gold)" />}
                   </button>
                 );
               })}
@@ -151,21 +205,36 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 className="btn-primary"
                 style={{ opacity: selectedGenres.length === 0 ? 0.5 : 1 }}
               >
-                Next: Select Movies <ArrowRight size={18} />
+                Next: Pick 5 Favorite Movies <ArrowRight size={18} />
               </button>
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* STEP 2: Pick 5 Movies */}
+        {step === 2 && (
           <div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '6px' }}>
-              Pick a few movies you enjoyed
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.95rem', marginBottom: '24px' }}>
-              These seed movies will be converted into high-confidence anchor points for our TF-IDF and collaborative models.
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+              <h2 id="onboarding-title" style={{ fontSize: '1.9rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text)' }}>
+                Pick at least 5 favorite films
+              </h2>
+              <span className="badge-match" style={{ fontSize: '0.74rem' }}>
+                {selectedMovies.length} / 5 selected
+              </span>
+            </div>
+            <p style={{ color: 'var(--muted)', fontSize: '0.94rem', marginBottom: '22px' }}>
+              These seed films provide high-confidence anchor ratings for collaborative and neural CF layers.
             </p>
 
-            {/* Seed Movie Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '32px' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+              gap: '14px',
+              marginBottom: '28px',
+              maxHeight: '380px',
+              overflowY: 'auto',
+              paddingRight: '6px'
+            }}>
               {POPULAR_SEED_MOVIES.map(movie => {
                 const isSelected = selectedMovies.includes(movie.id);
                 return (
@@ -173,57 +242,115 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     key={movie.id}
                     onClick={() => toggleMovie(movie.id)}
                     style={{
-                      background: isSelected ? 'rgba(229, 9, 20, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                      border: `1px solid ${isSelected ? '#e50914' : 'rgba(255, 255, 255, 0.08)'}`,
-                      borderRadius: '14px',
-                      padding: '12px',
+                      background: isSelected ? 'rgba(255, 178, 64, 0.16)' : 'var(--panel)',
+                      border: `1px solid ${isSelected ? 'var(--gold)' : 'var(--line)'}`,
+                      borderRadius: 'var(--r-md)',
+                      padding: '10px 12px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s',
+                      boxShadow: isSelected ? '0 0 16px rgba(255,178,64,0.2)' : 'none'
                     }}
                   >
                     <div style={{
                       width: '42px',
-                      height: '58px',
-                      borderRadius: '8px',
+                      height: '60px',
+                      borderRadius: 'var(--r-sm)',
                       overflow: 'hidden',
-                      background: '#1e2638',
+                      background: 'var(--ink)',
+                      border: '1px solid var(--line)',
                       flexShrink: 0
                     }}>
                       <img
                         src={movie.poster_url}
                         alt={movie.title}
                         loading="lazy"
+                        width="42"
+                        height="60"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          if (!target.dataset.fallback) {
-                            target.dataset.fallback = "true";
-                            target.src = getMoviePoster(movie as any);
-                          }
+                          target.src = generateMoviePoster(movie as any);
                         }}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <h4 style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {movie.title}
                       </h4>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{movie.year} • {movie.genre}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--muted)', display: 'block' }}>
+                        {movie.year} • {movie.genre}
+                      </span>
                     </div>
-                    {isSelected && <Check size={16} color="#e50914" />}
+                    {isSelected && <Check size={16} color="var(--gold)" />}
                   </div>
                 );
               })}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button onClick={() => setStep(1)} className="btn-secondary">
+                <ArrowLeft size={16} /> Back
+              </button>
+
               <button
-                onClick={() => setStep(1)}
-                className="btn-secondary"
+                onClick={() => setStep(3)}
+                disabled={selectedMovies.length < 5}
+                className="btn-primary"
+                style={{ opacity: selectedMovies.length < 5 ? 0.5 : 1 }}
               >
-                Back to Genres
+                Review & Confirm <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Confirm Taste Profile */}
+        {step === 3 && (
+          <div>
+            <h2 id="onboarding-title" style={{ fontSize: '1.9rem', fontWeight: 900, marginBottom: '6px', fontFamily: 'var(--font-display)', color: 'var(--text)' }}>
+              Confirm your taste profile
+            </h2>
+            <p style={{ color: 'var(--muted)', fontSize: '0.94rem', marginBottom: '24px' }}>
+              Our hybrid engine will immediately train cold-start weights for User #{userId}.
+            </p>
+
+            <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)', padding: '20px', marginBottom: '24px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <span style={{ fontSize: '0.74rem', color: 'var(--subtle)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', display: 'block', marginBottom: '8px' }}>
+                  Target Genres ({selectedGenres.length})
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedGenres.map(g => (
+                    <span key={g} className="badge-genre">
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.74rem', color: 'var(--subtle)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', display: 'block', marginBottom: '8px' }}>
+                  Seed Movies ({selectedMovies.length})
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedMovies.map(mid => {
+                    const found = POPULAR_SEED_MOVIES.find(m => m.id === mid);
+                    return (
+                      <span key={mid} className="badge-match" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Film size={12} /> {found?.title || `Movie #${mid}`}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button onClick={() => setStep(2)} className="btn-secondary">
+                <ArrowLeft size={16} /> Back
               </button>
 
               <button
@@ -231,7 +358,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 disabled={isSubmitting}
                 className="btn-primary"
               >
-                {isSubmitting ? "Personalizing Engine..." : "Generate Recommendations"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="spin-icon" /> Calibrating Engine...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} /> Complete Calibration
+                  </>
+                )}
               </button>
             </div>
           </div>

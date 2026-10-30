@@ -94,7 +94,7 @@ class RecommendationEngine:
                 )
             return recs
 
-        elif strategy_clean == "collaborative":
+        elif strategy_clean in ("collaborative", "item_cf"):
             recs = self.collaborative_model.recommend_for_user(user_id, top_n=top_n, user_ratings=user_ratings)
             for r in recs:
                 r["explanation"] = self.explanation_engine.explain_recommendation(
@@ -105,7 +105,7 @@ class RecommendationEngine:
                 )
             return recs
 
-        elif strategy_clean == "content_based":
+        elif strategy_clean in ("content_based", "content"):
             recs = self.content_model.recommend_for_user_ratings(user_ratings, top_n=top_n)
             for r in recs:
                 r["explanation"] = self.explanation_engine.explain_recommendation(
@@ -147,6 +147,9 @@ class RecommendationEngine:
                 predicted_score=r.get("predicted_score", 4.3)
             )
         return recs
+
+    # Backward-compatible alias
+    get_similar_movies = recommend_similar_movies
 
     def recommend_by_title(self, title: str, top_n: int = 10) -> List[Dict[str, Any]]:
         """Find movies similar to the given title."""

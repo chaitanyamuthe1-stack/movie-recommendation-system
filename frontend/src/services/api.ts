@@ -14,7 +14,7 @@ import {
   ExplanationResponse
 } from "../types";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://127.0.0.1:8000/api";
 
 export const api = {
   // Health
@@ -60,11 +60,18 @@ export const api = {
     return res.json();
   },
 
-  // Recommendations
   async getUserRecommendations(userId: number, strategy = "hybrid", limit = 15): Promise<RecommendationResponse> {
     const res = await fetch(`${API_BASE}/recommendations/${userId}?strategy=${strategy}&limit=${limit}`);
     if (!res.ok) throw new Error("Failed to fetch recommendations");
-    return res.json();
+    const data: RecommendationResponse = await res.json();
+    if (data && data.items) {
+      data.items = data.items.map(m => ({
+        ...m,
+        id: m.id ?? m.movie_id,
+        movie_id: m.movie_id ?? m.id
+      }));
+    }
+    return data;
   },
 
   async getSimilarMovies(movieId: number, topN = 6): Promise<Movie[]> {
@@ -93,8 +100,8 @@ export const api = {
       body: JSON.stringify({ user_id: userId, movie_id: movieId, rating: rating })
     });
     if (!res.ok) {
-      // In guest/demo mode fallback
-      return { success: true };
+      const errorText = await res.text().catch(() => "Failed to submit rating");
+      throw new Error(errorText || "Failed to submit rating");
     }
     return res.json();
   },
@@ -128,7 +135,15 @@ export const api = {
       body: JSON.stringify({ query, user_id: userId, top_n: topN })
     });
     if (!res.ok) throw new Error("Assistant query failed");
-    return res.json();
+    const data = await res.json();
+    if (data && data.recommendations) {
+      data.recommendations = data.recommendations.map((m: any) => ({
+        ...m,
+        id: m.id ?? m.movie_id,
+        movie_id: m.movie_id ?? m.id
+      }));
+    }
+    return data;
   },
 
   // ML Metrics & Admin

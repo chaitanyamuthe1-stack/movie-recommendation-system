@@ -1,0 +1,11 @@
+.git
+.github
+**/node_modules
+**/__pycache__
+.env
+.env.*
+!.env.example
+*.db
+docs
+tests/output
+*.md

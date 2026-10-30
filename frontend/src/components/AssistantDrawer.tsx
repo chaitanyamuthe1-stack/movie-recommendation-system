@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Bot, User, Star } from 'lucide-react';
 import { Movie, AssistantQueryResponse } from '../types';
 import { api } from '../services/api';
-import { getMoviePoster } from '../utils/moviePosters';
+import { getMoviePoster, generateMoviePoster } from '../utils/moviePosters';
 
 interface AssistantDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   userId: number;
   onOpenDetails: (movie: Movie) => void;
+  initialQuery?: string;
 }
 
 const SAMPLE_PROMPTS = [
@@ -22,10 +23,9 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
   isOpen,
   onClose,
   userId,
-  onOpenDetails
+  onOpenDetails,
+  initialQuery
 }) => {
-  if (!isOpen) return null;
-
   const [inputQuery, setInputQuery] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string; data?: AssistantQueryResponse }>>([
     {
@@ -34,6 +34,19 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const lastInitialQueryRef = useRef<string | null>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleSubmit = async (queryText?: string) => {
     const q = queryText || inputQuery;
@@ -61,18 +74,31 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (isOpen && initialQuery && initialQuery.trim() && lastInitialQueryRef.current !== initialQuery) {
+      lastInitialQueryRef.current = initialQuery;
+      handleSubmit(initialQuery);
+    }
+  }, [isOpen, initialQuery]);
+
+  if (!isOpen) return null;
+
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 1000,
-        background: 'rgba(3, 5, 9, 0.75)',
-        backdropFilter: 'blur(6px)',
+        background: 'rgba(6, 4, 3, 0.75)',
+        backdropFilter: 'blur(8px)',
         display: 'flex',
-        justifyContent: 'flex-end'
+        justifyContent: 'flex-end',
+        animation: 'fadeIn 0.25s ease-out'
       }}
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="AI Cinema Assistant"
     >
       <div
         className="glass-panel"
@@ -81,45 +107,47 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
           width: '100%',
           maxWidth: '520px',
           height: '100vh',
-          background: '#0d111a',
-          borderLeft: '1px solid rgba(99, 102, 241, 0.3)',
+          background: 'var(--ink-2)',
+          borderLeft: '1px solid var(--line)',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.9)'
+          boxShadow: '-16px 0 50px rgba(0, 0, 0, 0.95), var(--glow)'
         }}
       >
         {/* Drawer Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid var(--line)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(15, 20, 32, 0.9)'
+          background: 'var(--panel)',
+          backdropFilter: 'blur(16px)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-              borderRadius: '10px',
+              background: 'linear-gradient(135deg, var(--gold), var(--ember))',
+              borderRadius: 'var(--r-sm)',
               padding: '7px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              color: '#1a0e04'
             }}>
-              <Bot size={20} color="#ffffff" />
+              <Bot size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
                 AI Cinema Assistant
               </h3>
-              <span style={{ fontSize: '0.72rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                Grounded Catalog Engine
+              <span style={{ fontSize: '0.72rem', color: 'var(--teal)', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--teal)' }} />
+                Grounded Hybrid Catalog
               </span>
             </div>
           </div>
 
-          <button onClick={onClose} className="btn-ghost" style={{ padding: '6px' }}>
+          <button onClick={onClose} className="btn-ghost" style={{ padding: '6px', borderRadius: '50%' }} aria-label="Close">
             <X size={20} />
           </button>
         </div>
@@ -145,42 +173,53 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: msg.role === 'user' ? '#e50914' : '#6366f1',
+                  background: msg.role === 'user' ? 'linear-gradient(135deg, var(--gold), var(--ember))' : 'rgba(155, 140, 255, 0.25)',
+                  border: '1px solid var(--line)',
+                  color: msg.role === 'user' ? '#1a0e04' : 'var(--violet)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  {msg.role === 'user' ? <User size={16} color="#ffffff" /> : <Bot size={16} color="#ffffff" />}
+                  {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                 </div>
 
                 <div style={{
                   maxWidth: '82%',
-                  background: msg.role === 'user' ? 'rgba(229, 9, 20, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                  border: `1px solid ${msg.role === 'user' ? 'rgba(229, 9, 20, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
-                  borderRadius: '16px',
+                  background: msg.role === 'user' ? 'rgba(255, 178, 64, 0.12)' : 'var(--panel)',
+                  border: `1px solid ${msg.role === 'user' ? 'rgba(255, 178, 64, 0.35)' : 'var(--line)'}`,
+                  borderRadius: 'var(--r-md)',
                   padding: '12px 16px',
                   fontSize: '0.9rem',
-                  lineHeight: 1.5,
-                  color: '#f1f5f9'
+                  lineHeight: 1.55,
+                  color: 'var(--text)'
                 }}>
                   {msg.text}
+
+                  {/* Grounded in Catalog Badge */}
+                  {msg.data?.is_grounded && (
+                    <div style={{ marginTop: '8px' }}>
+                      <span className="badge-match" style={{ fontSize: '0.66rem' }}>
+                        ✓ Grounded in catalog
+                      </span>
+                    </div>
+                  )}
 
                   {/* Extracted Intent Tags */}
                   {msg.data?.extracted_preferences && (
                     <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {msg.data.extracted_preferences.genres.map(g => (
-                        <span key={g} className="badge-match" style={{ fontSize: '0.7rem' }}>
+                      {(msg.data.extracted_preferences.genres || []).map(g => (
+                        <span key={g} className="badge-genre" style={{ fontSize: '0.68rem' }}>
                           Genre: {g}
                         </span>
                       ))}
-                      {msg.data.extracted_preferences.moods.map(m => (
-                        <span key={m} className="badge-model" style={{ fontSize: '0.7rem' }}>
+                      {(msg.data.extracted_preferences.moods || []).map(m => (
+                        <span key={m} className="badge-model" style={{ fontSize: '0.68rem' }}>
                           Mood: {m}
                         </span>
                       ))}
                       {msg.data.extracted_preferences.era && (
-                        <span key={msg.data.extracted_preferences.era} className="badge-genre" style={{ fontSize: '0.7rem' }}>
+                        <span className="badge-match" style={{ fontSize: '0.68rem' }}>
                           Era: {msg.data.extracted_preferences.era}
                         </span>
                       )}
@@ -203,35 +242,38 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
                       key={m.id || (m as any).movie_id}
                       onClick={() => onOpenDetails(m)}
                       style={{
-                        background: 'rgba(20, 26, 40, 0.8)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '12px',
+                        background: 'var(--panel)',
+                        border: '1px solid var(--line)',
+                        borderRadius: 'var(--r-sm)',
                         padding: '10px 12px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
-                        transition: 'all 0.2s'
+                        transition: 'border-color 0.2s, transform 0.2s'
                       }}
                       className="glass-panel-interactive"
                     >
                       <div style={{
-                        width: '38px',
-                        height: '52px',
-                        borderRadius: '6px',
+                        width: '40px',
+                        height: '56px',
+                        borderRadius: 'var(--r-sm)',
                         overflow: 'hidden',
-                        background: '#1e2638',
+                        background: 'var(--ink)',
+                        border: '1px solid var(--line)',
                         flexShrink: 0
                       }}>
                         <img
                           src={getMoviePoster(m)}
                           alt={m.title}
                           loading="lazy"
+                          width="40"
+                          height="56"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             if (!target.dataset.fallback) {
                               target.dataset.fallback = "true";
-                              target.src = getMoviePoster({ ...m, poster_url: "", poster_path: "" });
+                              target.src = generateMoviePoster(m);
                             }
                           }}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -239,15 +281,15 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <h5 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <h5 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {m.title}
                           </h5>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            <Star size={11} fill="#fbbf24" color="#fbbf24" /> {m.vote_average.toFixed(1)}
+                          <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '2px', fontFamily: 'var(--font-mono)' }}>
+                            <Star size={11} fill="currentColor" /> {m.vote_average.toFixed(1)}
                           </span>
                         </div>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                          {m.release_year} • {m.genres.slice(0, 2).join(', ')}
+                        <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                          {m.release_year} • {(m.genres || []).slice(0, 2).join(', ')}
                         </span>
                       </div>
                     </div>
@@ -259,10 +301,10 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
 
           {isLoading && (
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Bot size={16} color="#ffffff" />
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(155, 140, 255, 0.2)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--violet)' }}>
+                <Bot size={16} />
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '10px 16px', fontSize: '0.85rem', color: '#94a3b8' }}>
+              <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)', padding: '10px 16px', fontSize: '0.85rem', color: 'var(--muted)' }}>
                 Extracting preferences & querying recommendation engine...
               </div>
             </div>
@@ -270,24 +312,27 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
         </div>
 
         {/* Sample Prompt Pills */}
-        <div style={{ padding: '8px 20px', display: 'flex', gap: '6px', overflowX: 'auto', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ padding: '8px 20px', display: 'flex', gap: '6px', overflowX: 'auto', borderTop: '1px solid var(--line)', background: 'var(--panel)' }}>
           {SAMPLE_PROMPTS.map((prompt, i) => (
             <button
               key={i}
               onClick={() => handleSubmit(prompt)}
               style={{
                 flex: '0 0 auto',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                color: '#94a3b8',
-                borderRadius: '16px',
-                padding: '4px 10px',
+                background: 'rgba(255, 240, 220, 0.04)',
+                border: '1px solid var(--line)',
+                color: 'var(--muted)',
+                borderRadius: 'var(--r-full)',
+                padding: '5px 12px',
                 fontSize: '0.72rem',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                transition: 'border-color 0.2s, color 0.2s'
               }}
+              onMouseEnter={(e) => { (e.currentTarget.style.borderColor = 'var(--gold)'); (e.currentTarget.style.color = 'var(--text)'); }}
+              onMouseLeave={(e) => { (e.currentTarget.style.borderColor = 'var(--line)'); (e.currentTarget.style.color = 'var(--muted)'); }}
             >
-              {prompt.slice(0, 30)}...
+              {prompt.slice(0, 32)}...
             </button>
           ))}
         </div>
@@ -295,8 +340,8 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
         {/* Input Bar */}
         <div style={{
           padding: '16px 20px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(10, 14, 24, 0.95)',
+          borderTop: '1px solid var(--line)',
+          background: 'var(--ink-2)',
           display: 'flex',
           gap: '10px'
         }}>
@@ -308,20 +353,22 @@ export const AssistantDrawer: React.FC<AssistantDrawerProps> = ({
             placeholder="Describe your desired movie..."
             style={{
               flex: 1,
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '12px',
+              background: 'var(--panel)',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--r-md)',
               padding: '10px 16px',
-              color: '#f8fafc',
+              color: 'var(--text)',
               fontSize: '0.9rem',
-              outline: 'none'
+              outline: 'none',
+              fontFamily: 'inherit'
             }}
           />
           <button
             onClick={() => handleSubmit()}
             disabled={!inputQuery.trim() || isLoading}
             className="btn-primary"
-            style={{ padding: '10px 16px', borderRadius: '12px' }}
+            style={{ padding: '10px 18px', borderRadius: 'var(--r-md)' }}
+            aria-label="Send query"
           >
             <Send size={16} />
           </button>
