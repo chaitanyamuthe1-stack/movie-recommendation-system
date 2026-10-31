@@ -18,7 +18,7 @@
       for training/evaluation, and say where that data lives.
 
 ## Repo polish
-- [ ] Put your name in `LICENSE`, `<YOUR-USERNAME>` in README badges
+- [x] Put your name in `LICENSE`, `<YOUR-USERNAME>` in README badges
 - [ ] Add 4 screenshots and a demo GIF to `docs/images/`
 - [ ] Add a short repo description and topics: recommender-system, pytorch, fastapi, react, docker
 - [ ] Pin the repo on your GitHub profile

@@ -1,6 +1,6 @@
 # 🎬 Movie Recommendation Platform — Hybrid ML System
 
-[![CI](https://github.com/<YOUR-USERNAME>/movie-recommendation-system/actions/workflows/ci.yml/badge.svg)](https://github.com/<YOUR-USERNAME>/movie-recommendation-system/actions)
+[![CI](https://github.com/chaitanyamuthe1-stack/movie-recommendation-system/actions/workflows/ci.yml/badge.svg)](https://github.com/chaitanyamuthe1-stack/movie-recommendation-system/actions)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
