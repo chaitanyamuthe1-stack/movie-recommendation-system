@@ -350,3 +350,4 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
     </div>
   );
 };
+

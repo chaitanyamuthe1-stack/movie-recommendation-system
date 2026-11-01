@@ -26,3 +26,4 @@ export const FloatingCineBot: React.FC<FloatingCineBotProps> = ({ onClick, isOpe
     </div>
   );
 };
+

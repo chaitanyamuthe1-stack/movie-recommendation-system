@@ -312,3 +312,4 @@ export const CompareView: React.FC<CompareViewProps> = ({ onOpenDetails, onOpenE
     </div>
   );
 };
+

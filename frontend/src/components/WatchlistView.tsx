@@ -241,3 +241,4 @@ export const WatchlistView: React.FC<WatchlistViewProps> = ({
     </div>
   );
 };
+

@@ -137,3 +137,4 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 };
 
 export const useWatchlist = () => useContext(WatchlistContext);
+

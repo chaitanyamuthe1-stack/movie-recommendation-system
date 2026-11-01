@@ -78,3 +78,4 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
 };
 
 export const useCompare = () => useContext(CompareContext);
+

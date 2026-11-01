@@ -114,3 +114,4 @@ export const MoodGrid: React.FC<MoodGridProps> = ({ onSelectMood }) => {
     </section>
   );
 };
+
