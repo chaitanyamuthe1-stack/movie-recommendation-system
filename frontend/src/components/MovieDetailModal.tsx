@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Star, Heart, Bookmark, Sparkles, Play, Loader2 } from 'lucide-react';
+import { X, Star, Heart, Bookmark, Sparkles, Play, Loader2, Scale, Check } from 'lucide-react';
 import { Movie } from '../types';
 import { api } from '../services/api';
 import { getMoviePoster, getMovieBackdrop, getMovieLogo, generateMoviePoster } from '../utils/moviePosters';
 import { useToast } from '../context/ToastContext';
+import { useWatchlist } from '../context/WatchlistContext';
+import { useCompare } from '../context/CompareContext';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -23,10 +25,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onRated
 }) => {
   const { showToast } = useToast();
+  const { toggleWatchlist, isInWatchlist } = useWatchlist();
+  const { toggleMovie, isComparing } = useCompare();
   const [userRating, setUserRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [isLiked, setIsLiked] = useState<boolean>(false);
-  const [inWatchlist, setInWatchlist] = useState<boolean>(false);
   const [logoError, setLogoError] = useState<boolean>(false);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState<boolean>(false);
@@ -237,14 +240,29 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
               <button
                 onClick={() => {
-                  const nextWatchlist = !inWatchlist;
-                  setInWatchlist(nextWatchlist);
-                  showToast(nextWatchlist ? `Saved "${movie.title}" to your watchlist` : `Removed from watchlist`, 'info');
+                  const mId = movie.id ?? (movie as any).movie_id;
+                  const added = toggleWatchlist(movie);
+                  showToast(added ? `Saved "${movie.title}" to your watchlist` : `Removed "${movie.title}" from watchlist`, 'info');
                 }}
                 className="btn-secondary"
-                style={inWatchlist ? { color: 'var(--teal)', borderColor: 'var(--teal)' } : {}}
+                style={isInWatchlist(movie.id ?? (movie as any).movie_id) ? { color: 'var(--teal)', borderColor: 'var(--teal)' } : {}}
               >
-                <Bookmark size={18} fill={inWatchlist ? 'currentColor' : 'none'} /> {inWatchlist ? 'In Watchlist' : 'Watchlist'}
+                {isInWatchlist(movie.id ?? (movie as any).movie_id) ? <Check size={18} /> : <Bookmark size={18} />}
+                <span>{isInWatchlist(movie.id ?? (movie as any).movie_id) ? 'Saved' : 'Watchlist'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  toggleMovie(movie);
+                  const mId = movie.id ?? (movie as any).movie_id;
+                  const comp = isComparing(mId);
+                  showToast(comp ? `Removed "${movie.title}" from compare` : `Added "${movie.title}" to compare`, 'info');
+                }}
+                className="btn-secondary"
+                style={isComparing(movie.id ?? (movie as any).movie_id) ? { color: 'var(--gold)', borderColor: 'var(--gold)' } : {}}
+              >
+                <Scale size={18} />
+                <span>{isComparing(movie.id ?? (movie as any).movie_id) ? 'Comparing' : 'Compare'}</span>
               </button>
             </div>
 

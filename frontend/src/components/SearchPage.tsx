@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Sparkles, Clock, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Search, Sparkles, Clock, X, SlidersHorizontal, RotateCcw, Star, Calendar } from 'lucide-react';
 import { Movie, Genre } from '../types';
 import { api } from '../services/api';
 import { MovieCard } from './MovieCard';
@@ -14,15 +14,25 @@ interface SearchPageProps {
 export const SearchPage: React.FC<SearchPageProps> = ({
   onOpenDetails,
   onOpenExplanation,
-  onOpenAssistant
+  onOpenAssistant,
 }) => {
   const [query, setQuery] = useState('');
   const [genres, setGenres] = useState<Genre[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('popularity');
-  const [movies, setMovies] = useState<Movie[]>([]);
+  const [minRating, setMinRating] = useState<number>(0);
+  const [minYear, setMinYear] = useState<number>(1970);
+  const [maxYear, setMaxYear] = useState<number>(2026);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+  const [rawMovies, setRawMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>(['Inception', 'Christopher Nolan', 'Sci-Fi', 'Tarantino']);
+  const [recentSearches, setRecentSearches] = useState<string[]>([
+    'Inception',
+    'Christopher Nolan',
+    'Sci-Fi',
+    'Tarantino',
+  ]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,48 +47,42 @@ export const SearchPage: React.FC<SearchPageProps> = ({
       const gList = await api.getGenres();
       setGenres(gList);
     } catch (e) {
-      console.error("Failed to load genres:", e);
+      console.error('Failed to load genres:', e);
     }
   };
 
-  const executeSearch = useCallback(async (searchTerm: string, genreFilter: string, sortFilter: string) => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
+  const executeSearch = useCallback(
+    async (searchTerm: string, genreFilter: string, sortFilter: string) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
 
-    setLoading(true);
-    try {
-      if (searchTerm.trim()) {
-        const results = await api.searchMovies(searchTerm.trim(), 40, genreFilter || undefined);
-        // Sort client side for search results
-        if (sortFilter === 'vote_average') {
-          results.sort((a, b) => b.vote_average - a.vote_average);
-        } else if (sortFilter === 'release_year') {
-          results.sort((a, b) => b.release_year - a.release_year);
-        } else if (sortFilter === 'title') {
-          results.sort((a, b) => a.title.localeCompare(b.title));
+      setLoading(true);
+      try {
+        if (searchTerm.trim()) {
+          const results = await api.searchMovies(searchTerm.trim(), 50, genreFilter || undefined);
+          setRawMovies(results);
+
+          const trimmed = searchTerm.trim();
+          setRecentSearches((prev) => {
+            const filtered = prev.filter((s) => s.toLowerCase() !== trimmed.toLowerCase());
+            return [trimmed, ...filtered].slice(0, 6);
+          });
+        } else {
+          const res = await api.getMovies(1, 60, genreFilter || undefined, sortFilter);
+          setRawMovies(res.items || []);
         }
-        setMovies(results);
-
-        // Add to recent searches if new
-        const trimmed = searchTerm.trim();
-        setRecentSearches((prev) => {
-          const filtered = prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
-          return [trimmed, ...filtered].slice(0, 6);
-        });
-      } else {
-        const res = await api.getMovies(1, 40, genreFilter || undefined, sortFilter);
-        setMovies(res.items || []);
+      } catch (e: any) {
+        if (e.name !== 'AbortError') {
+          console.error('Search execution failed:', e);
+        }
+      } finally {
+        setLoading(false);
       }
-    } catch (e: any) {
-      if (e.name !== 'AbortError') {
-        console.error("Search execution failed:", e);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   const handleQueryChange = (val: string) => {
     setQuery(val);
@@ -87,7 +91,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     }
     debounceTimerRef.current = setTimeout(() => {
       executeSearch(val, selectedGenre, sortBy);
-    }, 300);
+    }, 280);
   };
 
   const handleGenreSelect = (genreName: string) => {
@@ -108,57 +112,68 @@ export const SearchPage: React.FC<SearchPageProps> = ({
 
   const removeRecent = (e: React.MouseEvent, term: string) => {
     e.stopPropagation();
-    setRecentSearches(prev => prev.filter(s => s !== term));
+    setRecentSearches((prev) => prev.filter((s) => s !== term));
   };
 
+  const resetFilters = () => {
+    setMinRating(0);
+    setMinYear(1970);
+    setMaxYear(2026);
+    setSelectedGenre('');
+    setSortBy('popularity');
+    executeSearch(query, '', 'popularity');
+  };
+
+  // Client-side filtering for rating and year range
+  const filteredMovies = useMemo(() => {
+    return rawMovies.filter((movie) => {
+      if (minRating > 0 && movie.vote_average < minRating) return false;
+      if (movie.release_year && (movie.release_year < minYear || movie.release_year > maxYear)) {
+        return false;
+      }
+      return true;
+    });
+  }, [rawMovies, minRating, minYear, maxYear]);
+
+  const activeFiltersCount =
+    (selectedGenre ? 1 : 0) +
+    (minRating > 0 ? 1 : 0) +
+    (minYear > 1970 || maxYear < 2026 ? 1 : 0);
+
   return (
-    <div style={{ maxWidth: 1360, margin: '0 auto', padding: '30px 24px 80px 24px' }}>
-      <header style={{ marginBottom: '28px' }}>
-        <div className="shelf-kicker" style={{ marginBottom: '6px' }}>CATALOG SEARCH & DISCOVERY</div>
-        <h1 style={{ fontSize: 'clamp(2.2rem, 4vw, 3.2rem)', fontWeight: 900, marginBottom: '8px', fontFamily: 'var(--font-display)' }}>
-          Explore Films
-        </h1>
-        <p style={{ color: 'var(--muted)', fontSize: '0.96rem', maxWidth: '720px' }}>
-          Real-time query engine searching title, cast, directors, and plot summaries across the catalog.
-        </p>
+    <div className="cv-view-container search-view-page">
+      {/* Header */}
+      <header className="view-header">
+        <div className="view-header-left">
+          <div className="view-kicker">
+            <Search size={14} className="kicker-icon" />
+            <span>CATALOG SEARCH & ADVANCED DISCOVERY</span>
+          </div>
+          <h1 className="view-title">Explore Films & Directors</h1>
+          <p className="view-desc">
+            Search across 4,800+ titles, directors, cast members, and plot summaries with real-time semantic ranking.
+          </p>
+        </div>
+
+        <button
+          className={`cv-btn outline-btn ${isFilterDrawerOpen ? 'active' : ''}`}
+          onClick={() => setIsFilterDrawerOpen((prev) => !prev)}
+        >
+          <SlidersHorizontal size={16} />
+          <span>Advanced Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}</span>
+        </button>
       </header>
 
-      {/* Search Input Bar */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '20px',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{
-          flex: 1,
-          minWidth: '280px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          background: 'var(--panel)',
-          border: '1px solid var(--line)',
-          borderRadius: 'var(--r-md)',
-          padding: '12px 18px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          transition: 'border-color 0.2s'
-        }}>
-          <Search size={20} color="var(--gold)" />
+      {/* Search Input and Sort Row */}
+      <div className="search-controls-bar">
+        <div className="search-input-field">
+          <Search size={18} className="search-field-icon" />
           <input
             type="text"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
-            placeholder="Search by title, director, cast (e.g. Nolan, DiCaprio, Interstellar)..."
+            placeholder="Search by title, director, cast (e.g., Christopher Nolan, DiCaprio, Interstellar)..."
             aria-label="Search movies"
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text)',
-              fontSize: '0.96rem',
-              outline: 'none',
-              fontFamily: 'inherit'
-            }}
           />
           {query && (
             <button
@@ -166,7 +181,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                 setQuery('');
                 executeSearch('', selectedGenre, sortBy);
               }}
-              style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}
+              className="search-field-clear"
               aria-label="Clear search"
             >
               <X size={16} />
@@ -174,58 +189,104 @@ export const SearchPage: React.FC<SearchPageProps> = ({
           )}
         </div>
 
-        {/* Sort Selector */}
-        <select
-          value={sortBy}
-          onChange={(e) => handleSortChange(e.target.value)}
-          aria-label="Sort movies"
-          style={{
-            background: 'var(--panel)',
-            border: '1px solid var(--line)',
-            color: 'var(--text)',
-            borderRadius: 'var(--r-md)',
-            padding: '12px 18px',
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            outline: 'none',
-            fontFamily: 'inherit'
-          }}
-        >
-          <option value="popularity">Most Popular</option>
-          <option value="vote_average">Highest Rated</option>
-          <option value="release_year">Newest Release</option>
-          <option value="title">Title (A-Z)</option>
-        </select>
+        <div className="sort-field-wrap">
+          <span className="sort-label">SORT BY:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value)}
+            aria-label="Sort movies"
+            className="search-sort-select"
+          >
+            <option value="popularity">Most Popular</option>
+            <option value="vote_average">Highest Rated</option>
+            <option value="release_year">Newest Release</option>
+            <option value="title">Title (A-Z)</option>
+          </select>
+        </div>
       </div>
+
+      {/* Advanced Filter Drawer */}
+      {isFilterDrawerOpen && (
+        <div className="filter-drawer-card">
+          <div className="filter-drawer-header">
+            <div className="drawer-title">
+              <SlidersHorizontal size={15} />
+              <span>Multi-Dimensional Filters</span>
+            </div>
+            {activeFiltersCount > 0 && (
+              <button className="reset-filters-btn" onClick={resetFilters}>
+                <RotateCcw size={13} />
+                <span>Reset All</span>
+              </button>
+            )}
+          </div>
+
+          <div className="filter-drawer-grid">
+            {/* Rating Filter */}
+            <div className="filter-group">
+              <div className="filter-group-header">
+                <span className="filter-label">MINIMUM TMDB RATING</span>
+                <span className="filter-val">★ {minRating > 0 ? `${minRating.toFixed(1)}+` : 'Any'}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="9"
+                step="0.5"
+                value={minRating}
+                onChange={(e) => setMinRating(Number(e.target.value))}
+                className="taste-range"
+              />
+              <div className="range-bounds">
+                <span>0.0 (All)</span>
+                <span>9.0+ (Masterpieces)</span>
+              </div>
+            </div>
+
+            {/* Year Range Filter */}
+            <div className="filter-group">
+              <div className="filter-group-header">
+                <span className="filter-label">RELEASE ERA</span>
+                <span className="filter-val">
+                  {minYear} — {maxYear}
+                </span>
+              </div>
+              <div className="year-inputs-row">
+                <input
+                  type="number"
+                  min="1950"
+                  max={maxYear}
+                  value={minYear}
+                  onChange={(e) => setMinYear(Number(e.target.value))}
+                  className="year-num-input"
+                />
+                <span className="year-sep">to</span>
+                <input
+                  type="number"
+                  min={minYear}
+                  max="2026"
+                  value={maxYear}
+                  onChange={(e) => setMaxYear(Number(e.target.value))}
+                  className="year-num-input"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent Searches */}
       {recentSearches.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          <span style={{ fontSize: '0.74rem', color: 'var(--subtle)', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="recent-searches-row">
+          <span className="recent-lbl">
             <Clock size={12} /> RECENT:
           </span>
           {recentSearches.map((term) => (
-            <button
-              key={term}
-              onClick={() => handleRecentClick(term)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: 'var(--r-full)',
-                background: 'rgba(255, 240, 220, 0.05)',
-                border: '1px solid var(--line)',
-                color: 'var(--muted)',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
+            <button key={term} onClick={() => handleRecentClick(term)} className="recent-chip">
               <span>{term}</span>
               <span
                 onClick={(e) => removeRecent(e, term)}
-                style={{ opacity: 0.6, fontSize: '0.7rem' }}
+                className="recent-remove"
                 title="Remove"
               >
                 ×
@@ -236,15 +297,10 @@ export const SearchPage: React.FC<SearchPageProps> = ({
       )}
 
       {/* Genre Filter Chips */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '14px', marginBottom: '24px' }}>
+      <div className="search-genre-strip">
         <button
           onClick={() => handleGenreSelect('')}
-          className={`mood-chip ${selectedGenre === '' ? 'active' : ''}`}
-          style={{
-            background: selectedGenre === '' ? 'var(--gold)' : 'var(--panel)',
-            color: selectedGenre === '' ? '#1a0e04' : 'var(--text)',
-            borderColor: selectedGenre === '' ? 'var(--gold)' : 'var(--line)'
-          }}
+          className={`genre-filter-pill ${selectedGenre === '' ? 'active' : ''}`}
         >
           All Genres
         </button>
@@ -252,41 +308,34 @@ export const SearchPage: React.FC<SearchPageProps> = ({
           <button
             key={g.id}
             onClick={() => handleGenreSelect(g.name)}
-            className={`mood-chip ${selectedGenre === g.name ? 'active' : ''}`}
-            style={{
-              background: selectedGenre === g.name ? 'var(--gold)' : 'var(--panel)',
-              color: selectedGenre === g.name ? '#1a0e04' : 'var(--text)',
-              borderColor: selectedGenre === g.name ? 'var(--gold)' : 'var(--line)',
-              whiteSpace: 'nowrap'
-            }}
+            className={`genre-filter-pill ${selectedGenre === g.name ? 'active' : ''}`}
           >
             {g.name}
           </button>
         ))}
       </div>
 
-      {/* Results Count Banner */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', color: 'var(--muted)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
-        <span>Showing {movies.length} results</span>
-        {selectedGenre && <span style={{ color: 'var(--gold-soft)' }}>Genre: {selectedGenre}</span>}
+      {/* Results Header */}
+      <div className="search-results-hdr">
+        <span>
+          Showing <b>{filteredMovies.length}</b> titles
+          {query.trim() && ` for "${query}"`}
+        </span>
+        {selectedGenre && <span className="active-genre-pill">Genre: {selectedGenre}</span>}
       </div>
 
       {/* Movie Results Grid */}
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '22px' }}>
+        <div className="search-grid-layout">
           {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} style={{ height: '340px', borderRadius: 'var(--r-md)' }} className="skeleton" />
+            <div key={i} className="skeleton-grid-card" />
           ))}
         </div>
-      ) : movies.length > 0 ? (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
-          gap: '24px'
-        }}>
-          {movies.map((movie) => (
+      ) : filteredMovies.length > 0 ? (
+        <div className="search-grid-layout">
+          {filteredMovies.map((movie) => (
             <MovieCard
-              key={movie.id}
+              key={movie.id || (movie as any).movie_id}
               movie={movie}
               isGrid={true}
               onOpenDetails={onOpenDetails}
@@ -296,19 +345,21 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         </div>
       ) : (
         <EmptyState
-          title="No films match that yet"
-          message={`We couldn't find any films matching "${query}". Try searching another keyword or ask our AI assistant for natural language recommendations.`}
+          title="No Films Match Your Filters"
+          message={`We couldn't find any films matching your search and filter criteria. Try broadening your rating threshold, year range, or ask CineBot for recommendations.`}
           action={
-            onOpenAssistant && (
-              <button
-                className="btn-secondary"
-                onClick={onOpenAssistant}
-                style={{ borderColor: 'var(--violet)', color: 'var(--violet)', marginTop: '8px' }}
-              >
-                <Sparkles size={16} />
-                <span>Try asking the AI Assistant</span>
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <button className="cv-btn outline-btn" onClick={resetFilters}>
+                <RotateCcw size={15} />
+                <span>Reset Filters</span>
               </button>
-            )
+              {onOpenAssistant && (
+                <button className="cv-btn primary-btn" onClick={onOpenAssistant}>
+                  <Sparkles size={15} />
+                  <span>Ask CineBot Assistant</span>
+                </button>
+              )}
+            </div>
           }
         />
       )}
