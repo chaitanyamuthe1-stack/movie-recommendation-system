@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ThemeMode = 'cinema' | 'obsidian' | 'emerald';
+export type ThemeMode = 'cinema' | 'obsidian' | 'emerald' | 'light';
 
 interface ThemeContextType {
   theme: ThemeMode;
@@ -29,6 +29,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTheme((prev) => {
       if (prev === 'cinema') return 'obsidian';
       if (prev === 'obsidian') return 'emerald';
+      if (prev === 'emerald') return 'light';
       return 'cinema';
     });
   };

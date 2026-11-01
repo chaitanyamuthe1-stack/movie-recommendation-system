@@ -1,7 +1,8 @@
 import React from 'react';
-import { Search, Sparkles, Scale, Bookmark, SlidersHorizontal } from 'lucide-react';
+import { Search, Sparkles, Scale, Bookmark, SlidersHorizontal, Sun, Moon } from 'lucide-react';
 import { useWatchlist } from '../context/WatchlistContext';
 import { useCompare } from '../context/CompareContext';
+import { useTheme } from '../context/ThemeContext';
 
 export interface TopBarProps {
   onOpenCommandPalette: () => void;
@@ -28,6 +29,20 @@ export const TopBar: React.FC<TopBarProps> = ({
 }) => {
   const { totalCount: watchlistCount } = useWatchlist();
   const { totalCount: compareCount } = useCompare();
+  const { theme, toggleTheme } = useTheme();
+
+  const themeLabel: Record<string, string> = {
+    cinema: '🎬 Cinema',
+    obsidian: '🌌 Obsidian',
+    emerald: '🌿 Emerald',
+    light: '☀️ Light',
+  };
+  const nextTheme: Record<string, string> = {
+    cinema: 'Obsidian',
+    obsidian: 'Emerald',
+    emerald: 'Light',
+    light: 'Cinema',
+  };
 
   return (
     <header className="cv-topbar">
@@ -79,6 +94,16 @@ export const TopBar: React.FC<TopBarProps> = ({
             <span className="btn-badge">{compareCount}</span>
           </button>
         )}
+
+        <button
+          onClick={toggleTheme}
+          className="topbar-btn icon-btn theme-toggle-btn"
+          title={`Switch to ${nextTheme[theme]} theme`}
+          style={{ minWidth: 36, gap: 6 }}
+        >
+          {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+          <span style={{ fontSize: 11, letterSpacing: 0.2 }}>{themeLabel[theme]}</span>
+        </button>
 
         <button
           onClick={() => setActiveTab('watchlist')}
