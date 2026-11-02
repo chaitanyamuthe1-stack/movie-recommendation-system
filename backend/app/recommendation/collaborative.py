@@ -13,6 +13,8 @@ from scipy.sparse import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Dict, Any, Optional
 
+from backend.app.ml.numpy_loader import safe_npy_load, NpyLoadError
+
 logger = logging.getLogger(__name__)
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "models")
@@ -102,7 +104,16 @@ class ItemBasedCFModel:
             self.train_and_save()
             return True
 
-        self.item_similarity_matrix = np.load(sim_path)
+        try:
+            self.item_similarity_matrix = safe_npy_load(
+                sim_path,
+                allow_pickle=False,
+                expected_ndim=2,
+                expected_dtype=np.floating,
+            )
+        except NpyLoadError as exc:
+            logger.error("ItemBasedCFModel: could not load similarity matrix — %s", exc)
+            return False
         with open(means_path, "rb") as f:
             self.movie_mean_ratings = pickle.load(f)
         with open(mappings_path, "rb") as f:

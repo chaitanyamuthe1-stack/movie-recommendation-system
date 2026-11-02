@@ -12,6 +12,8 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Any, Optional
 
+from backend.app.ml.numpy_loader import safe_npy_load, NpyLoadError
+
 logger = logging.getLogger(__name__)
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "models")
@@ -38,7 +40,16 @@ class ContentBasedModel:
             return False
 
         self.movies_df = pd.read_csv(movies_path)
-        self.similarity_matrix = np.load(sim_path)
+        try:
+            self.similarity_matrix = safe_npy_load(
+                sim_path,
+                allow_pickle=False,
+                expected_ndim=2,
+                expected_dtype=np.floating,
+            )
+        except NpyLoadError as exc:
+            logger.error("ContentBasedModel: could not load similarity matrix — %s", exc)
+            return False
         
         # Build index maps
         for idx, row in self.movies_df.iterrows():
